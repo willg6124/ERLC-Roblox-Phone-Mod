@@ -1,0 +1,18 @@
+# Player Overlay .exe  ->  npm run dist:client
+# NOTE: this build deliberately ships NO server/ code and NO credentials —
+# a player could extract this .exe and find nothing worth stealing.
+appId: gg.erlc.phone.overlay
+productName: ERLC-Phone-Overlay
+directories:
+  output: release-client
+files:
+  - apps/client/**
+  - package.json
+extraMetadata:
+  main: apps/client/main.js
+win:
+  target: nsis
+  artifactName: ERLC-Phone-Overlay-Setup-${version}.${ext}
+nsis:
+  oneClick: false
+  perMachine: false
