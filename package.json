@@ -1,0 +1,25 @@
+{
+  "name": "erlc-roblox-phone-mod",
+  "version": "1.0.0",
+  "description": "ER:LC API-integrated dual-interface (iOS / Samsung One UI) desktop phone overlay for Emergency Response: Liberty County private servers. The Server Key never leaves the Server Owner Host.",
+  "private": true,
+  "license": "MIT",
+  "engines": { "node": ">=18.17" },
+  "main": "apps/client/main.js",
+  "scripts": {
+    "host:web": "node server/index.js --mock --demo --port 3847",
+    "host:live": "node server/index.js --live --port 3847",
+    "host": "electron apps/host/main.js",
+    "client": "electron apps/client/main.js",
+    "start": "npm run host:web",
+    "test": "node --test test/protocol.test.js test/hostServer.test.js test/webhook.test.js test/erlcClient.test.js",
+    "check": "node --check server/index.js && node --check server/hostServer.js && node --check server/erlcClient.js && node --check server/mockErlc.js && node --check shared/protocol.js && node --check phone/phone.js && node --check apps/host/main.js && node --check apps/client/main.js",
+    "dist:host": "electron-builder --config electron-builder.host.yml --win",
+    "dist:client": "electron-builder --config electron-builder.client.yml --win"
+  },
+  "dependencies": { "ws": "^8.18.0" },
+  "devDependencies": {
+    "electron": "^33.2.1",
+    "electron-builder": "^25.1.8"
+  }
+}

@@ -1,0 +1,8 @@
+node_modules/
+dist/
+release/
+*.log
+.env
+host-config.json
+phone-settings.json
+.DS_Store

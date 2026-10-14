@@ -1,0 +1,19 @@
+# Server Owner Host .exe  ->  npm run dist:host
+appId: gg.erlc.phone.host
+productName: ERLC-Host
+directories:
+  output: release-host
+files:
+  - apps/host/**
+  - server/**
+  - shared/**
+  - phone/**
+  - package.json
+extraMetadata:
+  main: apps/host/main.js
+win:
+  target: nsis
+  artifactName: ERLC-Host-Setup-${version}.${ext}
+nsis:
+  oneClick: false
+  perMachine: false

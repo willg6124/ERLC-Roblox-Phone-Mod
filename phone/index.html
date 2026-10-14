@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ER:LC Phone — Liberty County</title>
+<link rel="stylesheet" href="/phone/phone.css">
+</head>
+<body data-theme="ios">
+<div class="stage">
+  <!-- Web-preview explainer (hidden inside the Electron overlay window) -->
+  <aside class="panel" id="webPanel">
+    <div class="panel-badge">ER:LC PRIVATE SERVER API v2</div>
+    <h1>Liberty County<br>Phone Mod</h1>
+    <p class="panel-sub">A dual-interface desktop phone overlay for <strong>Emergency Response: Liberty County</strong> private servers — live 911 dispatch, GPS map, contacts synced from your server, messaging, and an owner-only Admin app.</p>
+    <ol class="steps">
+      <li><strong>Server Owner</strong> runs the Host (<code>ERLC-Host.exe</code>) and enters the ER:LC Server Key <em>there only</em>.</li>
+      <li>The Host shows a <strong>6-digit pairing code</strong>. Players enter it here — the key itself never touches a player's PC.</li>
+      <li>Pick <strong>iOS</strong> or <strong>Samsung One UI</strong>, choose your duty, and your phone goes live.</li>
+    </ol>
+    <div class="demo-box" id="demoBox" hidden>
+      <div class="demo-title">▶ Live demo running in Mock Mode (no key)</div>
+      <p>Player code <button class="code-chip" id="demoPlayerCode" type="button">······</button>
+         Owner code <button class="code-chip owner" id="demoOwnerCode" type="button">······</button></p>
+      <p class="demo-hint">Tap a code to fill the connect form. Use the Owner code to unlock the Admin app. Try username <code>willg6124</code>.</p>
+    </div>
+    <div class="panel-links">
+      <a href="/manager" target="_blank" rel="noopener">Open Host Manager ↗</a>
+      <span>·</span><span class="muted">Docs: README / docs/ARCHITECTURE.md</span>
+    </div>
+    <p class="panel-foot">In-game: this same UI runs in an always-on-top Electron overlay, toggled with a keybind (default <kbd>F8</kbd>). Money transfer &amp; voice calls are phone-to-phone roleplay features — the ER:LC API exposes no money/voice endpoints, and this app never pretends otherwise.</p>
+  </aside>
+
+  <!-- ======================= PHONE ======================= -->
+  <div class="phone" id="phone">
+    <div class="phone-notch ios-only"><div class="dynamic-island"></div></div>
+    <div class="phone-camera samsung-only"></div>
+
+    <div class="statusbar">
+      <span class="sb-time" id="sbTime">9:41</span>
+      <span class="sb-right">
+        <span class="sb-net" id="sbNet">ERLC&nbsp;5G</span>
+        <span class="sb-batt"><i id="sbBatt"></i></span>
+      </span>
+    </div>
+
+    <!-- Incoming-911 / call banners -->
+    <div class="banner" id="banner" hidden>
+      <div class="banner-icon" id="bannerIcon">🚨</div>
+      <div class="banner-body"><div class="banner-title" id="bannerTitle">New 911 call</div><div class="banner-text" id="bannerText"></div></div>
+      <button class="banner-btn" id="bannerBtn" type="button">View</button>
+    </div>
+
+    <!-- Incoming voice call -->
+    <div class="call-overlay" id="callOverlay" hidden>
+      <div class="call-avatar" id="callAvatar">?</div>
+      <div class="call-name" id="callName">Unknown</div>
+      <div class="call-state" id="callState">incoming call…</div>
+      <div class="call-actions">
+        <button class="call-decline" id="callDecline" type="button">✕</button>
+        <button class="call-accept" id="callAccept" type="button">📞</button>
+      </div>
+    </div>
+
+    <!-- CONNECT -->
+    <section class="screen active" id="screen-connect">
+      <div class="connect-wrap">
+        <div class="connect-logo">📱</div>
+        <h2>Liberty County Phone</h2>
+        <p class="connect-sub">Connect to your private server's Host.<br>Ask the server owner for the 6-digit code.</p>
+        <label class="field"><span>Roblox username</span><input id="inName" autocomplete="off" placeholder="e.g. willg6124"></label>
+        <label class="field"><span>6-digit pairing code</span><input id="inCode" inputmode="numeric" maxlength="6" placeholder="000000"></label>
+        <label class="field"><span>Host address</span><input id="inHost" autocomplete="off" spellcheck="false"></label>
+        <label class="field"><span>I'm on duty as</span>
+          <select id="inDuty"><option>Police</option><option>Fire</option><option>EMS</option><option>Civilian</option></select>
+        </label>
+        <div class="field"><span>Phone style</span>
+          <div class="seg" id="themeSeg">
+            <button type="button" data-theme-choice="ios" class="on"> iOS</button>
+            <button type="button" data-theme-choice="samsung"> Samsung</button>
+          </div>
+        </div>
+        <button class="primary-btn" id="btnConnect" type="button">Connect phone</button>
+        <div class="connect-error" id="connectError" role="alert"></div>
+        <p class="connect-privacy">🔒 This player app contains <strong>no ER:LC Server Key</strong> — the owner's Host holds it and only sends your phone filtered game data.</p>
+      </div>
+    </section>
+
+    <!-- HOME -->
+    <section class="screen" id="screen-home">
+      <div class="home-clock"><div class="home-time" id="homeTime">9:41</div><div class="home-date" id="homeDate">Tuesday, October 14</div>
+        <div class="home-server" id="homeServer">Not connected</div></div>
+      <div class="app-grid" id="appGrid"></div>
+      <div class="dock" id="dock"></div>
+    </section>
+
+    <!-- APP SHELL -->
+    <section class="screen" id="screen-app">
+      <header class="app-header">
+        <button class="back-btn" id="btnBack" type="button">‹ <span class="ios-only-inline">Apps</span><span class="samsung-only-inline">Back</span></button>
+        <h3 id="appTitle">App</h3><span class="app-header-spacer"></span>
+      </header>
+      <div class="app-body">
+        <!-- DISPATCH / 911 -->
+        <div class="view" id="view-dispatch">
+          <div class="duty-row"><span>Duty alerts:</span><select id="dutySelect"><option>Police</option><option>Fire</option><option>EMS</option><option>Civilian</option></select></div>
+          <div id="callList" class="call-list"></div>
+        </div>
+        <!-- MAP -->
+        <div class="view" id="view-map">
+          <div class="map-wrap"><canvas id="mapCanvas" width="640" height="640"></canvas><div class="map-you" id="mapYouLabel"></div></div>
+          <div class="map-tools">
+            <label class="chk"><input type="checkbox" id="chkVehicles" checked> Vehicles</label>
+            <label class="chk"><input type="checkbox" id="chkCalls" checked> 911 calls</label>
+            <button class="mini-btn" id="btnDropPin" type="button">📍 Drop pin</button>
+            <button class="mini-btn" id="btnSharePin" type="button" disabled>Share pin</button>
+          </div>
+          <div class="map-hint" id="mapHint">Tap the map, then “Drop pin”, to mark a spot. Share it straight into Messages.</div>
+          <div id="mapDetail" class="map-detail"></div>
+        </div>
+        <!-- CONTACTS -->
+        <div class="view" id="view-contacts">
+          <input class="search" id="contactSearch" placeholder="Search players in server…">
+          <div id="contactList" class="contact-list"></div>
+        </div>
+        <!-- MESSAGES -->
+        <div class="view" id="view-messages">
+          <div id="threadList" class="thread-list"></div>
+          <div id="threadView" class="thread-view" hidden>
+            <button class="mini-btn" id="btnThreads" type="button">‹ Chats</button>
+            <div class="thread-name" id="threadName"></div>
+            <div class="bubbles" id="bubbles"></div>
+            <div class="composer">
+              <button class="icon-btn" id="btnPhoto" type="button" title="Send a photo">🖼️</button>
+              <button class="icon-btn" id="btnPinMsg" type="button" title="Send my dropped pin">📍</button>
+              <input id="msgInput" placeholder="Message" autocomplete="off">
+              <button class="send-btn" id="btnSend" type="button">↑</button>
+              <input type="file" id="photoInput" accept="image/*" hidden>
+            </div>
+          </div>
+        </div>
+        <!-- ADMIN (owner) -->
+        <div class="view" id="view-admin">
+          <div class="admin-guard" id="adminGuard">🔐 The Admin app only unlocks on the <strong>Server Owner's</strong> phone (join with the Owner code from the Host Manager).</div>
+          <div id="adminMain" hidden>
+            <div class="stat-grid" id="adminStats"></div>
+            <div class="cmd-row"><input id="cmdInput" placeholder=":h Server restarting in 5…" autocomplete="off"><button class="mini-btn accent" id="btnCmd" type="button">Run</button></div>
+            <div class="cmd-presets" id="cmdPresets"></div>
+            <div class="cmd-result" id="cmdResult"></div>
+            <div class="tabs" id="adminTabs">
+              <button data-tab="modcalls" class="on" type="button">Mod calls</button>
+              <button data-tab="commands" type="button">Commands</button>
+              <button data-tab="kills" type="button">Kills</button>
+              <button data-tab="joins" type="button">Joins</button>
+            </div>
+            <div id="adminLogList" class="log-list"></div>
+          </div>
+        </div>
+        <!-- SETTINGS -->
+        <div class="view" id="view-settings">
+          <div class="settings-group"><h4>Appearance</h4>
+            <div class="seg" id="themeSeg2">
+              <button type="button" data-theme-choice="ios"> iOS</button>
+              <button type="button" data-theme-choice="samsung"> Samsung One UI</button>
+            </div>
+            <p class="hint">Switch any time — layout, status bar, icons and navigation change instantly.</p>
+          </div>
+          <div class="settings-group"><h4>Overlay (desktop app)</h4>
+            <label class="field"><span>Show / hide keybind</span><input id="inKeybind" value="F8"></label>
+            <p class="hint" id="keybindHint">In the Electron overlay this re-registers a global shortcut (e.g. <code>F8</code>, <code>CommandOrControl+Shift+P</code>). In the web preview it is saved only.</p>
+          </div>
+          <div class="settings-group"><h4>Session</h4>
+            <div class="kv"><span>Signed in as</span><strong id="setName">—</strong></div>
+            <div class="kv"><span>Role</span><strong id="setRole">—</strong></div>
+            <div class="kv"><span>Host source</span><strong id="setSource">—</strong></div>
+            <div class="kv"><span>Phone balance (RP)</span><strong id="setBalance">—</strong></div>
+            <button class="danger-btn" id="btnDisconnect" type="button">Disconnect phone</button>
+          </div>
+          <div class="settings-group"><h4>Privacy</h4><p class="hint">No ER:LC Server Key exists in this app — nothing to leak. The Host sends only names, teams, callsigns, locations and calls. Server Join Keys and owner credentials are stripped on the Host before anything reaches your phone.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <div class="nav-gesture ios-only"><div class="home-bar"></div></div>
+    <nav class="nav-buttons samsung-only"><span>▦</span><span class="nav-home"></span><span>‹</span></nav>
+    <div class="toast" id="toast" hidden></div>
+  </div>
+</div>
+<script src="/shared/protocol.js"></script>
+<script src="/phone/phone.js"></script>
+</body>
+</html>
